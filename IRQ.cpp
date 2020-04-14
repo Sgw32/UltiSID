@@ -3,10 +3,45 @@
 #include "SID.h"
 #include "barebone_sounds.h"
 
+
+uint8_t address_lines;
+uint8_t data_lines;
+
+uint8_t portPinsC[pinCountC] = {15, 22, 23, 9, 10, 13, 11, 12}; // Port C bits D0, D1, D2, D3, D4, A5, CS, RW - These are pin numbers used on teensy
+uint8_t portPinsD[pinCountD] = {PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7}; // Port D bits A0, A1, A2, A3, A4, A5, A6, A7
+
+extern HardwareTimer Timer1;
+
+
+void ReadLines() {
+
+// Reading address and data lines of sid chip
+     address_lines = GPIOC->regs->IDR;//PORTC_PDIR ;//& B00011111 ;
+     data_lines = GPIOD->regs->IDR;//PORTD_PDIR ;
+
+      // If both RW and CS signals are LOW 
+      if ((address_lines &  B11000000) < 0x01 ){
+        //Check if note is for SID at $d4200
+        if ((address_lines &  B00100000) < 0x01){
+          setreg(address_lines &  B00011111 ,data_lines);
+      // Send data to reSID. 
+        //playSID.setreg(address_lines &  B00011111 ,data_lines);
+       // playSID1.setreg(address_lines &  B00011111 ,data_lines);
+      }
+      else {
+        //playSID1.setreg(address_lines &  B00011111 ,data_lines);
+      }
+  }
+}
+
 #ifdef USE_ROGER_CORE
 void irq_handler(void) 
 { 
 #endif
+
+
+/*
+*/
 
 #ifdef USE_STM32duino_CORE
 void irq_handler(HardwareTimer*) 
@@ -18,6 +53,7 @@ void irq_handler(HardwareTimer*)
     // Timer1.pause(); // need to pause timer to be able to set value inside irq. Not needed when using ( Timer1.setCompare(TIMER_CH1, main_volume); )
     // TIMER1->CCR1 =  main_volume; //  faster version of Timer1.setCompare(TIMER_CH1, main_volume);
     // Timer1.resume(); // 0.875uS
+    //Serial.println(main_volume);
     Timer1.setCompare(TIMER_CH1, main_volume); // 0.584 uS
   #endif
   #ifdef USE_STM32duino_CORE
@@ -28,6 +64,57 @@ void irq_handler(HardwareTimer*)
   #endif
     SID_emulator();
 }
+
+void InitHardware() { // setup pins and IRQ
+  // init irq
+  Serial.println(" Init ");
+  noInterrupts();
+  //pinMode(BUTTON_1, INPUT_PULLUP);
+#ifdef  USE_ROGER_CORE
+
+  pinMode (AUDIO_OUT, PWM); //   audio output pin
+  Timer1.setPeriod(getPeriod());
+
+  Timer2.setPrescaleFactor(1);
+  Timer2.setMode(TIMER_CH2, TIMER_OUTPUTCOMPARE);
+  Timer2.setPeriod(getMultiplier());
+  Timer2.setCompare(TIMER_CH2, 1);
+  Timer2.attachInterrupt(TIMER_CH2, irq_handler);
+#endif
+
+#ifdef USE_STM32duino_CORE
+  pinMode(AUDIO_OUT, OUTPUT);
+
+  PWM->pause();
+  PWM->setMode(1, TIMER_OUTPUT_COMPARE_PWM1, PA8);
+  PWM->setPrescaleFactor(1);
+  PWM->setOverflow( period * magic_number, TICK_FORMAT);
+  PWM->resume();
+
+
+  HardwareTimer *IRQtimer = new HardwareTimer(TIM2);
+  IRQtimer->setMode(2, TIMER_OUTPUT_COMPARE);
+  IRQtimer->setOverflow(multiplier, MICROSEC_FORMAT);
+  IRQtimer->attachInterrupt(irq_handler);
+  IRQtimer->resume();
+#endif
+
+  // Setting PORTC and PORTD pins as inputs
+  for (int a=0; a<pinCountC; a++) {
+    pinMode(portPinsC[a], INPUT);
+  }
+  /*  for (int a=0; a<pinCountD; a++) {
+    pinMode(portPinsD[a], INPUT);
+  }*/
+  
+  // Attach an interrupt when RW goes LOW. Seems to work well.
+  //attachInterrupt(digitalPinToInterrupt(RW), ReadLines, FALLING );
+  
+
+  interrupts();
+  Serial.println(" Init ok");
+}
+
 
 void setreg(uint8_t addr,uint8_t value)
 {
@@ -1297,7 +1384,7 @@ inline void SID_emulator ()
     // reSID:
     // Maximum delta cycles for the filter to work satisfactorily under current
     // cutoff frequency and resonance constraints is approximately 8.
-ы
+
     delta_t = multiplier;
     delta_t_flt = FILTER_SENSITIVITY;
 
