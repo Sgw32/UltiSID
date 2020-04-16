@@ -10,6 +10,10 @@ uint8_t data_lines;
 uint16_t address_lines16;
 uint16_t data_lines16;
 
+uint16_t address_lines16_p;
+uint16_t data_lines16_p;
+uint8_t dirty = 0;
+
 uint8_t portPinsC[pinCountC] = {PA0, PA1, PA2, PA3, PA4, PB11, PB3, PB4}; // Port C bits D0, D1, D2, D3, D4, A5, CS, RW - These are pin numbers used on teensy
 uint8_t portPinsD[pinCountD] = {PB6, PB7, PB8, PB9, PB10, PB11, PB12, PB13}; // Port D bits A0, A1, A2, A3, A4, A5, A6, A7
 
@@ -52,25 +56,46 @@ uint16_t getDataLines()
   return data_lines16&0b0011111111000000;
 }
 
+void process()
+{
+  
+      if (dirty)
+      {
+      /*Serial.print("a");
+      Serial.print(address_lines16_p&0b11111);
+      Serial.print("d");
+      Serial.println((data_lines16_p&0b0011111111000000)>>6);
+      */
+       setreg(address_lines16_p&0b11111 ,(data_lines16_p&0b0011111111000000)>>6);
+      }
+      dirty = 0;
+}
+
 void ReadLines() { 
 // Reading address and data lines of sid chip
- 
   // If both RW and CS signals are LOW 
-  data_lines16 = GPIOB->regs->IDR;
-  address_lines16 = GPIOA->regs->IDR;
-  if (!(data_lines16&0b01000))
-  {   
-      digitalWrite(PC13,LOW);
-      __asm__ volatile ("nop");      
-      digitalWrite(PC13,HIGH); 
-      //digitalWrite(PC13,HIGH);
-      //setreg(address_lines16&0b11111 ,(data_lines16&0b0011111111000000)>>6);
-      Serial.print("a");
-      Serial.print(address_lines16&0b11111);
-      Serial.print("d");
-      Serial.println((data_lines16&0b0011111111000000)>>6);
-  }
   
+  uint32_t d2 = GPIOA->regs->IDR;
+  uint32_t d1 = GPIOB->regs->IDR;
+  data_lines16 = d1;
+  address_lines16 = d2;
+  if (!(data_lines16&0b11000))
+  {   
+      //noInterrupts();
+     // digitalWrite(PC13,LOW);
+     // __asm__ volatile ("nop");      
+     // digitalWrite(PC13,HIGH); 
+      //digitalWrite(PC13,HIGH);
+      //address_lines16_p = address_lines16;
+      //data_lines16_p = data_lines16;
+      setreg(address_lines16&0b11111 ,(data_lines16&0b0011111111000000)>>6);
+      //interrupts();
+      //dirty = 1;
+      //Serial.print("a");
+      //Serial.print(address_lines16&0b11111);
+      //Serial.print("d");
+      //Serial.println((data_lines16&0b0011111111000000)>>6);
+  }
 }
 
 #ifdef USE_ROGER_CORE
@@ -110,19 +135,21 @@ void InitHardware() { // setup pins and IRQ
   noInterrupts();
   pinMode(PC13,OUTPUT);
   //pinMode(BUTTON_1, INPUT_PULLUP);
-  /*
+
+
 #ifdef  USE_ROGER_CORE
 
   pinMode (AUDIO_OUT, PWM); //   audio output pin
   Timer1.setPeriod(getPeriod());
 
+/*
   Timer2.setPrescaleFactor(1);
   Timer2.setMode(TIMER_CH2, TIMER_OUTPUTCOMPARE);
   Timer2.setPeriod(getMultiplier());
   Timer2.setCompare(TIMER_CH2, 1);
-  Timer2.attachInterrupt(TIMER_CH2, irq_handler);
+  Timer2.attachInterrupt(TIMER_CH2, irq_handler);*/
 #endif
-
+/*
 #ifdef USE_STM32duino_CORE
   pinMode(AUDIO_OUT, OUTPUT);
 
@@ -138,8 +165,8 @@ void InitHardware() { // setup pins and IRQ
   IRQtimer->setOverflow(multiplier, MICROSEC_FORMAT);
   IRQtimer->attachInterrupt(irq_handler);
   IRQtimer->resume();
-#endif
-*/
+#endif*/
+
   // Setting PORTC and PORTD pins as inputs
   for (int a=0; a<pinCountC; a++) {
     pinMode(portPinsC[a], INPUT);
@@ -176,10 +203,10 @@ void setreg(uint8_t addr,uint8_t value)
         break;
       case 1:
         OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8)); // *0.985
-        Serial.print("a");
-        Serial.print(addr);
-        Serial.print("d");
-        Serial.println(value);
+        //Serial.print("a");
+        //Serial.print(addr);
+        //Serial.print("d");
+        //Serial.println(value);
         break;
       case 2:
         PW_HiLo_voice_1 = SID[2] + (((SID[3] & 0x0f) << 8 ));
@@ -207,10 +234,10 @@ void setreg(uint8_t addr,uint8_t value)
       case 5:
         ADSR_Attack_1 = ( (SID[5] >> 4 ) & 0x0f) ;
         ADSR_Decay_1 = ( (SID[5]  ) & 0x0f) ;
-        Serial.print("a");
-        Serial.print(addr);
-        Serial.print("d");
-        Serial.println(value);
+        //Serial.print("a");
+        //Serial.print(addr);
+        //Serial.print("d");
+        //Serial.println(value);
         //digitalWrite(PC13,!digitalRead(PC13));
         break;
       case 6:
@@ -353,11 +380,11 @@ void setreg(uint8_t addr,uint8_t value)
         break;
       case 24:
         //STAD4XX = 1; // SID write signal for IRQ
-        OFF3 =  ( (SID[24] >> 7 ) & 1) ;; // on/off; //
+        /*OFF3 =  ( (SID[24] >> 7 ) & 1) ;; // on/off; //
         FILTER_HP =  ( (SID[24] >> 6 ) & 1) ;; // on/off; //;
         FILTER_BP =  ( (SID[24] >> 5 ) & 1) ;; // on/off; //;
         FILTER_LP =  ( (SID[24] >> 4 ) & 1) ;; // on/off; //;
-        MASTER_VOLUME =   (SID[24]  & 15) ;; // on/off; //;
+        MASTER_VOLUME =   (SID[24]  & 15) ;; // on/off; //;*/
         // change volume immidiattelly
         //main_volume = MASTER_VOLUME * ( main_volume_32bit) / 15;
         //TIMER1_BASE->CCR1 =  main_volume;

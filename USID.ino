@@ -29,7 +29,7 @@
 // If <period> is 1 , AUDIO OUT can be connected to PA8 (no need for R1,C1 ). I don't think 1Mhz sample rate will be in hearing range
 
 
-
+long long int tmr = micros();
 
 
 #ifdef USE_STM32duino_CORE
@@ -60,6 +60,11 @@ void printBinary(byte inByte)
 }
 
 void loop() {
+  if ((micros()-tmr)>getMultiplier())
+  {
+    irq_handler();
+    tmr = micros();
+  }
   //digitalWrite(PC13,LOW);
   //delay(1000);
   /*Serial.print((getAddrLines()&0xFF00)>>8, BIN); 
@@ -80,4 +85,6 @@ void loop() {
     Serial.println();
     //delay(10);
   }*/
+  process();
+  
 }

@@ -22,6 +22,7 @@ void irq_handler(HardwareTimer*);
 void ReadLines();
 
 void initPorts();
+void process();
 uint16_t getAddrLines();
 uint16_t getDataLines();
 inline void SID_emulator();
