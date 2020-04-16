@@ -1,504 +1,74 @@
-#include "setup.h"
-#include "IRQ.h"
+
+// SID emulation only
+// I use it as base for my projects that need simple sounds or sound effects.
+
+#define AUDIO_OUT       PA8                        // can't be changed, this is just reminder
+
+// core detector
+#ifdef USE_HAL_DRIVER // Official ST cores. Support for multiple line of MPU
+#define USE_STM32duino_CORE //  Set in preferences: https://github.com/stm32duino/BoardManagerFiles/raw/master/STM32/package_stm_index.json and search stm32 in board manager. Choose stm32 cores by ST Microelectronics. Select your CPU from tools menu)
+#else
+#define USE_ROGER_CORE //  Set in preferences: http://dan.drown.org/stm32duino/package_STM32duino_index.json and search stm32F1 in board manager. Choose STM32F1xx core (NOTE: Only STM32F1 works)
+#endif
+
 #include "SID.h"
-#include "barebone_sounds.h"
-
-
-uint8_t address_lines;
-uint8_t data_lines;
-
-uint16_t address_lines16;
-uint16_t data_lines16;
-
-uint8_t portPinsC[pinCountC] = {PA0, PA1, PA2, PA3, PA4, PB11, PB3, PB4}; // Port C bits D0, D1, D2, D3, D4, A5, CS, RW - These are pin numbers used on teensy
-uint8_t portPinsD[pinCountD] = {PB6, PB7, PB8, PB9, PB10, PB11, PB12, PB13}; // Port D bits A0, A1, A2, A3, A4, A5, A6, A7
-
-extern HardwareTimer Timer1;
-
-
-void initPorts()
-{
-   for (int a=0; a<pinCountC; a++) {
-    pinMode(portPinsC[a], INPUT);
-  }
-  for (int a=0; a<pinCountD; a++) {
-    pinMode(portPinsD[a], INPUT);
-  }
-}
-
-uint16_t getAddrLines()
-{
-  uint8_t a = digitalRead(CS);
-  __asm__ volatile ("nop");
-  //__asm__ volatile ("nop");
-  uint8_t b = digitalRead(CS);
-  if (!a&&!b)
-  {
-    //noInterrupts();
-    address_lines16 = GPIOA->regs->IDR;//&0b1001111000000000;
-    data_lines16 = GPIOB->regs->IDR;
- //   interrupts();
-  }
-  else
-  {
-    address_lines16 = 0;
-    data_lines16 = 0;
-  }
-  return address_lines16&0b11111;
-}
-
-uint16_t getDataLines()
-{
-  return data_lines16&0b0011111111000000;
-}
-
-void ReadLines() { 
-// Reading address and data lines of sid chip
- 
-  // If both RW and CS signals are LOW 
-  data_lines16 = GPIOB->regs->IDR;
-  address_lines16 = GPIOA->regs->IDR;
-  if (!(data_lines16&0b01000))
-  {   
-      digitalWrite(PC13,LOW);
-      __asm__ volatile ("nop");      
-      digitalWrite(PC13,HIGH); 
-      //digitalWrite(PC13,HIGH);
-      //setreg(address_lines16&0b11111 ,(data_lines16&0b0011111111000000)>>6);
-      Serial.print("a");
-      Serial.print(address_lines16&0b11111);
-      Serial.print("d");
-      Serial.println((data_lines16&0b0011111111000000)>>6);
-  }
-  
-}
+#include "2_setup.h"
+#include "4_IRQ.h"
+#include "6_barebone_sounds.h"
 
 #ifdef USE_ROGER_CORE
-void irq_handler(void) 
-{ 
+void irq_handler(void) { //
+#endif
+
+#ifdef USE_STM32duino_CORE
+  void irq_handler(HardwareTimer*) {
 #endif
 
 
-/*
-*/
 
-#ifdef USE_STM32duino_CORE
-void irq_handler(HardwareTimer*) 
-{
-  #endif
-  // IRQ time can vary, better to set PWM on previous calculated volume, so at least it's changing at fixed time
-  #ifdef USE_ROGER_CORE
+    // IRQ time can vary, better to set PWM on previous calculated volume, so at least it's changing at fixed time
+
+
+
+#ifdef USE_ROGER_CORE
     // STM32duino boards
     // Timer1.pause(); // need to pause timer to be able to set value inside irq. Not needed when using ( Timer1.setCompare(TIMER_CH1, main_volume); )
     // TIMER1->CCR1 =  main_volume; //  faster version of Timer1.setCompare(TIMER_CH1, main_volume);
     // Timer1.resume(); // 0.875uS
-    //Serial.println(main_volume);
     Timer1.setCompare(TIMER_CH1, main_volume); // 0.584 uS
-  #endif
-  #ifdef USE_STM32duino_CORE
+#endif
+
+
+#ifdef USE_STM32duino_CORE
     // STM32 boards
     // analogWrite(PA8, main_volume);
     //PWM->setCaptureCompare(1, main_volume, TICK_COMPARE_FORMAT);
     TIM1->CCR1 =  main_volume; //  faster version of PWM->setCaptureCompare(1, main_volume, TICK_COMPARE_FORMAT);
-  #endif
+#endif
+
+
+
     SID_emulator();
-}
 
-void InitHardware() { // setup pins and IRQ
-  // init irq
-  Serial.println(" Init ");
-  noInterrupts();
-  pinMode(PC13,OUTPUT);
-  //pinMode(BUTTON_1, INPUT_PULLUP);
-  /*
-#ifdef  USE_ROGER_CORE
-
-  pinMode (AUDIO_OUT, PWM); //   audio output pin
-  Timer1.setPeriod(getPeriod());
-
-  Timer2.setPrescaleFactor(1);
-  Timer2.setMode(TIMER_CH2, TIMER_OUTPUTCOMPARE);
-  Timer2.setPeriod(getMultiplier());
-  Timer2.setCompare(TIMER_CH2, 1);
-  Timer2.attachInterrupt(TIMER_CH2, irq_handler);
-#endif
-
-#ifdef USE_STM32duino_CORE
-  pinMode(AUDIO_OUT, OUTPUT);
-
-  PWM->pause();
-  PWM->setMode(1, TIMER_OUTPUT_COMPARE_PWM1, PA8);
-  PWM->setPrescaleFactor(1);
-  PWM->setOverflow( period * magic_number, TICK_FORMAT);
-  PWM->resume();
-
-
-  HardwareTimer *IRQtimer = new HardwareTimer(TIM2);
-  IRQtimer->setMode(2, TIMER_OUTPUT_COMPARE);
-  IRQtimer->setOverflow(multiplier, MICROSEC_FORMAT);
-  IRQtimer->attachInterrupt(irq_handler);
-  IRQtimer->resume();
-#endif
-*/
-  // Setting PORTC and PORTD pins as inputs
-  for (int a=0; a<pinCountC; a++) {
-    pinMode(portPinsC[a], INPUT);
   }
-  for (int a=0; a<pinCountD; a++) {
-    pinMode(portPinsD[a], INPUT);
-  }
-  
-  // Attach an interrupt when RW goes LOW. Seems to work well.
-  attachInterrupt(digitalPinToInterrupt(RW), ReadLines, FALLING );
-  
 
-  interrupts();
-  Serial.println(" Init ok");
-}
+  //
 
-
-void setreg(uint8_t addr,uint8_t value)
-{
-  uint8_t access_adress = addr;
-    SID[(access_adress)] = value; //  SID
-
-    
-    
-
-  
-    digitalWrite(PC13,!digitalRead(PC13));
-    
-    // disable if IRQ is transfering SID[] variable
-    switch (access_adress) {
-
-      case 0:
-        OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8) ); // *0.985
-        break;
-      case 1:
-        OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8)); // *0.985
-        Serial.print("a");
-        Serial.print(addr);
-        Serial.print("d");
-        Serial.println(value);
-        break;
-      case 2:
-        PW_HiLo_voice_1 = SID[2] + (((SID[3] & 0x0f) << 8 ));
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 3:
-        PW_HiLo_voice_1 = SID[2] + (( (SID[3] & 0x0f) << 8 ));
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 4:
-        STAD4XX = 1;
-        noise_bit_voice_1 = ( (SID[4] >> 7 ) & 1) ;
-        pulse_bit_voice_1 = ( (SID[4] >> 6 ) & 1) ;
-        sawtooth_bit_voice_1 = ( (SID[4] >> 5 ) & 1) ;
-        triangle_bit_voice_1 = ( (SID[4] >> 4 ) & 1) ;
-        test_bit_voice_1   = ( (SID[4] >> 3 ) & 1) ; //
-        ring_bit_voice_1   = ( (SID[4] >> 2 ) & 1) ;
-        SYNC_bit_voice_1 = ( (SID[4] >> 1 ) & 1) ; //
-        Gate_bit_1 = SID[4] & 1;   //
-
-        //Serial.println("Gate 1");
-        //waveform_switch_1 = (noise_bit_voice_1 << 3) | (pulse_bit_voice_1 << 2) | (sawtooth_bit_voice_1 << 1) | (triangle_bit_voice_1); // for barebone version
-        //waveform_switch_1 =  ( SID[4] >> 4); // it's in IRQ
-        break;
-      case 5:
-        ADSR_Attack_1 = ( (SID[5] >> 4 ) & 0x0f) ;
-        ADSR_Decay_1 = ( (SID[5]  ) & 0x0f) ;
-        Serial.print("a");
-        Serial.print(addr);
-        Serial.print("d");
-        Serial.println(value);
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 6:
-        //STAD4XX = 1; // SID write signal for IRQ
-        ADSR_Sustain_1 = ( (SID[6] >> 4 ) & 0x0f) ;
-        ADSR_Release_1 = ( (SID[6]  ) & 0x0f);
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 7:
-        OSC_2_HiLo = (SID[7] + ( SID[8] << 8)) ; // PAL speed recalc // *0.985
-        break;
-      case 8:
-        OSC_2_HiLo = (SID[7] + ( SID[8] << 8)) ; // *0.985
-        break;
-      case 9:
-        PW_HiLo_voice_2 = SID[9] + ( (SID[10] & 0x0f) << 8);
-        break;
-      case 10:
-        PW_HiLo_voice_2 = SID[9] + ( (SID[10] & 0x0f) << 8);
-        break;
-      case 11:
-        STAD4XX = 1;
-        noise_bit_voice_2 = ( (SID[11] >> 7 ) & 1) ;
-        pulse_bit_voice_2 = ( (SID[11] >> 6 ) & 1) ;
-        sawtooth_bit_voice_2 = ( (SID[11] >> 5 ) & 1) ;
-        triangle_bit_voice_2 = ( (SID[11] >> 4 ) & 1) ;
-        test_bit_voice_2   = ( (SID[11] >> 3 ) & 1) ; //
-        ring_bit_voice_2 = ( (SID[11] >> 2 ) & 1) ; //
-        SYNC_bit_voice_2 = ( (SID[11] >> 1 ) & 1) ; //
-        Gate_bit_2 = SID[11] & 1;   //
-
-       // Serial.println("Gate 2");
-
-        //waveform_switch_2 = (noise_bit_voice_2 << 3) | (pulse_bit_voice_2 << 2) | (sawtooth_bit_voice_2 << 1) | (triangle_bit_voice_2);
-        //waveform_switch_2 = 0x0f & ( SID[11] >> 4);
-
-        break;
-      case 12:
-        //STAD4XX = 1; // SID write signal for IRQ
-        ADSR_Attack_2 = ( (SID[12] >> 4 ) & 0x0f) ;
-        ADSR_Decay_2 = ( (SID[12]  ) & 0x0f) ;
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 13:
-        //STAD4XX = 1; // SID write signal for IRQ
-        ADSR_Sustain_2 = ( (SID[13] >> 4 ) & 0x0f) ;
-        ADSR_Release_2 = ( (SID[13]  ) & 0x0f);
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 14:
-        OSC_3_HiLo = (SID[14] + ( SID[15] << 8)) ; // *0.985
-        break;
-      case 15:
-        OSC_3_HiLo = (SID[14] + ( SID[15] << 8)) ; // *0.985
-        break;
-      case 16:
-        PW_HiLo_voice_3 = SID[16] + ( (SID[17] & 0x0f) << 8);
-        break;
-      case 17:
-        PW_HiLo_voice_3 = SID[16] + ( (SID[17] & 0x0f) << 8);
-        break;
-      case 18:
-        STAD4XX = 1;
-        noise_bit_voice_3 = ( (SID[18] >> 7 ) & 1) ;
-        pulse_bit_voice_3 = ( (SID[18] >> 6 ) & 1) ;
-        sawtooth_bit_voice_3 = ( (SID[18] >> 5 ) & 1) ;
-        triangle_bit_voice_3 = ( (SID[18] >> 4 ) & 1) ;
-        test_bit_voice_3  = ( (SID[18] >> 3 ) & 1) ; //
-        ring_bit_voice_3 = ( (SID[18] >> 2 ) & 1) ; //
-        SYNC_bit_voice_3 = ( (SID[18] >> 1 ) & 1) ; //
-        Gate_bit_3 = SID[18] & 1;   //
-
-        //Serial.println("Gate 3");
-        //waveform_switch_3 = (noise_bit_voice_3 << 3) | (pulse_bit_voice_3 << 2) | (sawtooth_bit_voice_3 << 1) | (triangle_bit_voice_3); // for barebone version
-        //waveform_switch_3 = 0x0f & ( SID[18] >> 4);
-        break;
-      case 19:
-        //STAD4XX = 1; // SID write signal for IRQ
-        ADSR_Attack_3 = ( (SID[19] >> 4 ) & 0x0f) ;
-        ADSR_Decay_3 = ( (SID[19]  ) & 0x0f) ;
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 20:
-        //STAD4XX = 1; // SID write signal for IRQ
-        ADSR_Sustain_3 = ( (SID[20] >> 4 ) & 0x0f) ;
-        ADSR_Release_3 = ( (SID[20]  ) & 0x0f);
-        //digitalWrite(PC13,!digitalRead(PC13));
-        break;
-      case 21:
-        FILTER_HiLo = (SID[21] & 0x07) + ( SID[22] << 3); // 11bit // TODO
-
-        //set w0
-        // from reSID
-        // Multiply with 1.048576 to facilitate division by 1 000 000 by right-
-        // shifting 20 times (2 ^ 20 = 1048576).
-        // w0 = static_cast<sound_sample>(2*pi*f0[fc]*1.048576);
-        w0 = w0_constant_part * (FILTER_HiLo + 0x01); // 0x01 offset testing
-        // w0_ceil_dt = w0 <= w0_max_dt ? w0 : w0_max_dt;
-        if (w0 < w0_max_dt) {
-          w0_ceil_dt = w0;
-        }
-        else {
-          w0_ceil_dt = w0_max_dt;
-        }
-
-        break;
-      case 22:
-        FILTER_HiLo = (SID[21] & 0x07) + (SID[22] << 3); // 11bit // TODO
-
-        //set w0
-        // Multiply with 1.048576 to facilitate division by 1 000 000 by right-
-        // shifting 20 times (2 ^ 20 = 1048576).
-        // w0 = static_cast<sound_sample>(2*pi*f0[fc]*1.048576);
-        w0 = w0_constant_part * (FILTER_HiLo + 0x1); //
-
-        // w0_ceil_dt = w0 <= w0_max_dt ? w0 : w0_max_dt;
-        if (w0 < w0_max_dt) {
-          w0_ceil_dt = w0;
-        }
-        else {
-          w0_ceil_dt = w0_max_dt;
-        }
-
-        break;
-      case 23:
-
-        FILTER_Resonance = ( (SID[23] >> 4 ) & 0x0f) ;; // 4bit // TODO
-        FILTER_Enable_1 =  SID[23]  & 1 ; // on/off
-        FILTER_Enable_2 = ( (SID[23] >> 1 ) & 1) ;; // on/off
-        FILTER_Enable_3 = ( (SID[23] >> 2 ) & 1) ;; // on/off
-        FILTER_Enable_EXT = ( (SID[23] >> 3 ) & 1) ;; // on/off
-
-        FILTER_Enable_switch =  SID[23]  & 0x07 ; // for filter switch in irq (no external input filter)
-
-        // The coefficient 1024 is dispensed of later by right-shifting 10 times
-        // (2 ^ 10 = 1024).
-        // _1024_div_Q = static_cast<sound_sample>(1024.0/(0.707 + 1.0*res/0x0f));
-        Q_1024_div = (1024.0 / (0.707 + 1.0 * (FILTER_Resonance) / 15.0));
-
-        break;
-      case 24:
-        //STAD4XX = 1; // SID write signal for IRQ
-        OFF3 =  ( (SID[24] >> 7 ) & 1) ;; // on/off; //
-        FILTER_HP =  ( (SID[24] >> 6 ) & 1) ;; // on/off; //;
-        FILTER_BP =  ( (SID[24] >> 5 ) & 1) ;; // on/off; //;
-        FILTER_LP =  ( (SID[24] >> 4 ) & 1) ;; // on/off; //;
-        MASTER_VOLUME =   (SID[24]  & 15) ;; // on/off; //;
-        // change volume immidiattelly
-        //main_volume = MASTER_VOLUME * ( main_volume_32bit) / 15;
-        //TIMER1_BASE->CCR1 =  main_volume;
-        // disable if there is there is no delay hack
-        //STAD4XX = 1;
-
-        break;
-      case 25:
-
-        break;
-      case 26:
-
-        break;
-      case 27:
-
-        break;
-      case 28:
-
-        break;
-      case 29:
-
-        break;
-      case 30:
-
-        break;
-      case 31:
-        break;
-    }
-
-    // STAD4XX = 1; // SID write signal for IRQ
-    //PB13_HIGH;
-}
-
-void selftest()
-{
-  // sounds in barebone_sounds.h (names are just from another projects)
-  error_open_folder();
-  delay(1000);
-  /*error_sound_ROOT();
-  delay(1000);
-  error_open_file();
-  delay(1000);
-  error_open_folder ();
-  delay(1000);
-  error_open_sid ();
-  delay(1000);
-  error_PSID_V2_RAM_OVERFLOW();
-  delay(1000);*/
-}
-
-uint8_t getPeriod()
-{
-  return period;  
-}
-
-uint8_t getMultiplier()
-{
-  return multiplier;
-}
-
-void reset_SID()
-{
-  
+  inline void SID_emulator () {
 
 
 
-  // list of global variables that control SID emulator . Keep in mind that IRQ will detect change after some delay (around 50uS)
-  // detailed information: http://archive.6502.org/datasheets/mos_6581_sid.pdf
-
-  // channel 1
-  OSC_1_HiLo            = 0;              // 0-65535      // 
-  PW_HiLo_voice_1       = 0;              // 0-4095       // 
-  noise_bit_voice_1     = 0;              // true/false   // 
-  pulse_bit_voice_1     = 0;              // true/false   // 
-  sawtooth_bit_voice_1  = 0;              // true/false   // 
-  triangle_bit_voice_1  = 0;              // true/false   // 
-  test_bit_voice_1      = 0;              // true/false   // 
-  ring_bit_voice_1      = 0;              // true/false   // 
-  SYNC_bit_voice_1      = 0;              // true/false   // 
-  Gate_bit_1            = 0;              // true/false   // 
-  ADSR_Attack_1         = 0;              // 0-15         // 
-  ADSR_Decay_1          = 0;              // 0-15         // 
-  ADSR_Sustain_1        = 0;              // 0-15         // 
-  ADSR_Release_1        = 0;              // 0-15         // 
-
-  // channel 2
-
-  OSC_2_HiLo            = 0;              // 0-65535      // 
-  PW_HiLo_voice_2       = 0;              // 0-4095       // 
-  noise_bit_voice_2     = 0;              // true/false   // 
-  pulse_bit_voice_2     = 0;              // true/false   // 
-  sawtooth_bit_voice_2  = 0;              // true/false   // 
-  triangle_bit_voice_2  = 0;              // true/false   // 
-  test_bit_voice_2      = 0;              // true/false   // 
-  ring_bit_voice_2      = 0;              // true/false   // 
-  SYNC_bit_voice_2      = 0;              // true/false   // 
-  Gate_bit_2            = 0;              // true/false   // 
-  ADSR_Attack_2         = 0;              // 0-15         // 
-  ADSR_Decay_2          = 0;              // 0-15         // 
-  ADSR_Sustain_2        = 0;              // 0-15         // 
-  ADSR_Release_2        = 0;              // 0-15         // 
-
-  // channel 3
-  OSC_3_HiLo            = 0;              // 0-65535      // 
-  PW_HiLo_voice_3       = 0;              // 0-4095       // 
-  noise_bit_voice_3     = 0;              // true/false   // 
-  pulse_bit_voice_3     = 0;              // true/false   // 
-  sawtooth_bit_voice_3  = 0;              // true/false   // 
-  triangle_bit_voice_3  = 0;              // true/false   // 
-  test_bit_voice_3      = 0;              // true/false   // 
-  ring_bit_voice_3      = 0;              // true/false   // 
-  SYNC_bit_voice_3      = 0;              // true/false   // 
-  Gate_bit_3            = 0;              // true/false   // 
-  ADSR_Attack_3         = 0;              // 0-15         // 
-  ADSR_Decay_3          = 0;              // 0-15         // 
-  ADSR_Sustain_3        = 0;              // 0-15         // 
-  ADSR_Release_3        = 0;              // 0-15         // 
-
-  // other registers
-  FILTER_HiLo           = 0;              // 0-2047       // 
-  FILTER_Resonance      = 0;              // 0-15         // 
-  FILTER_Enable_1       = 0;              // true/false   // 
-  FILTER_Enable_2       = 0;              // true/false   // 
-  FILTER_Enable_3       = 0;              // true/false   // 
-  OFF3                  = 0;              // true/false   // 
-  FILTER_HP             = 0;              // true/false   // 
-  FILTER_BP             = 0;              // true/false   // 
-  FILTER_LP             = 0;              // true/false   // 
-  MASTER_VOLUME         = 0;              // 0-15         //  
-}
-
-inline void SID_emulator () 
-{
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //Magic
     ///////////////////////////////////
 
+
+
     OSC_MSB_Previous_1 = OSC_MSB_1;
     OSC_MSB_Previous_2 = OSC_MSB_2;
     OSC_MSB_Previous_3 = OSC_MSB_3;
+
 
     OSC_1 = ((!test_bit_voice_1) & 1) * ((OSC_1 + (  multiplier * OSC_1_HiLo)) ) & 0xffffff;
     OSC_2 = ((!test_bit_voice_2) & 1) * ((OSC_2 + (  multiplier * OSC_2_HiLo)) ) & 0xffffff;
@@ -1543,4 +1113,176 @@ inline void SID_emulator ()
     // btw, lot of "i hope" in this code... oh, well... :-)
 
     STAD4XX = 0; // let main program know that his request has been served
+  }
+
+// INFO:
+
+
+// This project is purely for my own entertainment , so WITHOUT ANY WARRANTY!
+// SCHEMATICS:
+//
+//
+//    .-----------------.
+//    |                 |
+//    | STM32FxxxXXxx   |
+//    .------------|----.
+//     |G         P|
+//     |N         A|
+//     |D         8--R1----|------C2---------|
+//     |                   |                 --
+//     |                   C                 || P1
+//     |                   1                 ||<--------- OUDIO OUT
+//     |                   |                 --
+//     .-------------------|------------------|---------- GND
+//                        GND
+//    R1 = 100-500 Ohm
+//    C1 = 100 nF
+//    C2 = 10 uF
+//    P1 = 10KOhm potentiometer
+//
+// If <period> is 1 , AUDIO OUT can be connected to PA8 (no need for R1,C1 ). I don't think 1Mhz sample rate will be in hearing range
+
+
+
+
+
+#ifdef USE_STM32duino_CORE
+HardwareTimer *PWM = new HardwareTimer(TIM1); // need to set it up here, before setup{}
+#endif
+
+
+
+
+inline void InitHardware() { // setup pins and IRQ
+
+  // init irq
+
+  noInterrupts();
+
+  //pinMode(BUTTON_1, INPUT_PULLUP);
+
+#ifdef  USE_ROGER_CORE
+
+  pinMode (PA8, PWM); //   audio output pin
+
+  Timer1.setPeriod(period);
+
+  Timer2.setPrescaleFactor(1);
+  Timer2.setMode(TIMER_CH2, TIMER_OUTPUTCOMPARE);
+  Timer2.setPeriod(multiplier);
+  Timer2.setCompare(TIMER_CH2, 1);
+  Timer2.attachInterrupt(TIMER_CH2, irq_handler);
+#endif
+
+#ifdef USE_STM32duino_CORE
+  pinMode(PA8, OUTPUT);
+
+  PWM->pause();
+  PWM->setMode(1, TIMER_OUTPUT_COMPARE_PWM1, PA8);
+  PWM->setPrescaleFactor(1);
+  PWM->setOverflow( period * magic_number, TICK_FORMAT);
+  PWM->resume();
+
+
+  HardwareTimer *IRQtimer = new HardwareTimer(TIM2);
+  IRQtimer->setMode(2, TIMER_OUTPUT_COMPARE);
+  IRQtimer->setOverflow(multiplier, MICROSEC_FORMAT);
+  IRQtimer->attachInterrupt(irq_handler);
+  IRQtimer->resume();
+#endif
+
+  interrupts();
+
+}
+
+void setup() {
+
+
+
+
+  // list of global variables that control SID emulator . Keep in mind that IRQ will detect change after some delay (around 50uS)
+  // detailed information: http://archive.6502.org/datasheets/mos_6581_sid.pdf
+
+  // channel 1
+  OSC_1_HiLo            = 0;              // 0-65535      // 
+  PW_HiLo_voice_1       = 0;              // 0-4095       // 
+  noise_bit_voice_1     = 0;              // true/false   // 
+  pulse_bit_voice_1     = 0;              // true/false   // 
+  sawtooth_bit_voice_1  = 0;              // true/false   // 
+  triangle_bit_voice_1  = 0;              // true/false   // 
+  test_bit_voice_1      = 0;              // true/false   // 
+  ring_bit_voice_1      = 0;              // true/false   // 
+  SYNC_bit_voice_1      = 0;              // true/false   // 
+  Gate_bit_1            = 0;              // true/false   // 
+  ADSR_Attack_1         = 0;              // 0-15         // 
+  ADSR_Decay_1          = 0;              // 0-15         // 
+  ADSR_Sustain_1        = 0;              // 0-15         // 
+  ADSR_Release_1        = 0;              // 0-15         // 
+
+  // channel 2
+
+  OSC_2_HiLo            = 0;              // 0-65535      // 
+  PW_HiLo_voice_2       = 0;              // 0-4095       // 
+  noise_bit_voice_2     = 0;              // true/false   // 
+  pulse_bit_voice_2     = 0;              // true/false   // 
+  sawtooth_bit_voice_2  = 0;              // true/false   // 
+  triangle_bit_voice_2  = 0;              // true/false   // 
+  test_bit_voice_2      = 0;              // true/false   // 
+  ring_bit_voice_2      = 0;              // true/false   // 
+  SYNC_bit_voice_2      = 0;              // true/false   // 
+  Gate_bit_2            = 0;              // true/false   // 
+  ADSR_Attack_2         = 0;              // 0-15         // 
+  ADSR_Decay_2          = 0;              // 0-15         // 
+  ADSR_Sustain_2        = 0;              // 0-15         // 
+  ADSR_Release_2        = 0;              // 0-15         // 
+
+  // channel 3
+  OSC_3_HiLo            = 0;              // 0-65535      // 
+  PW_HiLo_voice_3       = 0;              // 0-4095       // 
+  noise_bit_voice_3     = 0;              // true/false   // 
+  pulse_bit_voice_3     = 0;              // true/false   // 
+  sawtooth_bit_voice_3  = 0;              // true/false   // 
+  triangle_bit_voice_3  = 0;              // true/false   // 
+  test_bit_voice_3      = 0;              // true/false   // 
+  ring_bit_voice_3      = 0;              // true/false   // 
+  SYNC_bit_voice_3      = 0;              // true/false   // 
+  Gate_bit_3            = 0;              // true/false   // 
+  ADSR_Attack_3         = 0;              // 0-15         // 
+  ADSR_Decay_3          = 0;              // 0-15         // 
+  ADSR_Sustain_3        = 0;              // 0-15         // 
+  ADSR_Release_3        = 0;              // 0-15         // 
+
+  // other registers
+  FILTER_HiLo           = 0;              // 0-2047       // 
+  FILTER_Resonance      = 0;              // 0-15         // 
+  FILTER_Enable_1       = 0;              // true/false   // 
+  FILTER_Enable_2       = 0;              // true/false   // 
+  FILTER_Enable_3       = 0;              // true/false   // 
+  OFF3                  = 0;              // true/false   // 
+  FILTER_HP             = 0;              // true/false   // 
+  FILTER_BP             = 0;              // true/false   // 
+  FILTER_LP             = 0;              // true/false   // 
+  MASTER_VOLUME         = 0;              // 0-15         // 
+
+  InitHardware(); // 2_setup.ino  (start SID emulator)
+  
+  reset_SID(); // in 6_barebone_sounds.ino
+}
+
+
+void loop() {
+
+  // sounds in 6_barebone_sounds.ino (names are just from another projects)
+  error_sound_SD();
+  delay(1000);
+  error_sound_ROOT();
+  delay(1000);
+  error_open_file();
+  delay(1000);
+  error_open_folder ();
+  delay(1000);
+  error_open_sid ();
+  delay(1000);
+  error_PSID_V2_RAM_OVERFLOW();
+  delay(1000);
 }

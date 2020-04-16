@@ -21,6 +21,9 @@ void irq_handler(HardwareTimer*);
 
 void ReadLines();
 
+void initPorts();
+uint16_t getAddrLines();
+uint16_t getDataLines();
 inline void SID_emulator();
 void reset_SID();
 void selftest();
