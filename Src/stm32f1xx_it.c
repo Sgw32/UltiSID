@@ -43,9 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-extern uint32_t address_lines16_p;
-extern uint32_t data_lines16_p;
-extern uint32_t last_data_lines16_p;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -218,7 +216,11 @@ void EXTI3_IRQHandler(void)
   {
 	  address_lines16_p = GPIOA->IDR;
 	  GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
-
+	  data_buffer[writeIndex]=data_lines16_p;
+	  address_buffer[writeIndex]=address_lines16_p;
+	  writeIndex++;
+	  bufferLength++;
+	  //GPIOB->ODR &= ~(1<<1);
 	  //Data and address lines check:
 	  //if ((data_lines16_p&0b0011111111000000)==0b0000100000000000) //To check
 	  //if ((address_lines16_p&0b11111)==0b10000)

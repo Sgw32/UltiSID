@@ -46,7 +46,6 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-uint32_t last_data_lines16_p;
 uint32_t address_lines16_p;
 uint32_t data_lines16_p;
 /* USER CODE END PV */
@@ -98,8 +97,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   setup();
-  address_lines16_p = 0;
-  last_data_lines16_p = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -110,14 +107,18 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	//irq_handler();
-	if (GPIOB->ODR&(1<<1))
+	if (bufferLength>0)
 	{
-		GPIOB->ODR &= ~(1<<1); //Turn off GPIOB1 as a flag
-		if (address_lines16_p==0b00000)
+		uint32_t data = data_buffer[readIndex];
+		uint32_t address = address_buffer[readIndex];
+		bufferLength--;
+		readIndex++;
+		//setreg(address&0b11111 ,(data&0b0011111111000000)>>6);
+		if (GPIOB->ODR&(1<<1))
 		{
+			GPIOB->ODR &= ~(1<<1); //Turn off GPIOB1 as a flag
 			beep();
 		}
-		//setreg(address_lines16_p&0b11111 ,(last_data_lines16_p&0b0011111111000000)>>6);
 	}
   }
   /* USER CODE END 3 */

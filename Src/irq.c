@@ -13,6 +13,12 @@ uint16_t data_lines16;
 uint16_t rw_data_lines16=0;
 uint8_t dirty = 0;
 
+uint32_t data_buffer[255];
+uint32_t address_buffer[255];
+uint8_t	readIndex	    =	0;	// Index of the read pointer
+uint8_t	writeIndex	    =	0;	// Index of the write pointer
+uint8_t	bufferLength	=	0;	// Number of values in circular buffer
+
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 

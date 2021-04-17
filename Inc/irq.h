@@ -30,6 +30,11 @@ void InitHardware();
 
 extern uint32_t address_lines16_p;
 extern uint32_t data_lines16_p;
-extern uint32_t last_data_lines16_p;
+extern uint32_t data_buffer[255];
+extern uint32_t address_buffer[255];
+extern uint8_t	readIndex;
+extern uint8_t	writeIndex;
+extern uint8_t	bufferLength;
+
 
 #endif
