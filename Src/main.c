@@ -46,8 +46,13 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-uint32_t address_lines16_p;
-uint32_t data_lines16_p;
+extern uint32_t address_lines16_p;
+extern uint32_t data_lines16_p;
+extern uint32_t data_buffer[255];
+extern uint32_t address_buffer[255];
+extern uint8_t	readIndex;
+extern uint8_t	writeIndex;
+extern uint8_t	bufferLength;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,17 +114,22 @@ int main(void)
 	//irq_handler();
 	if (bufferLength>0)
 	{
+//		GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
 		uint32_t data = data_buffer[readIndex];
 		uint32_t address = address_buffer[readIndex];
 		bufferLength--;
 		readIndex++;
+//		GPIOB->ODR &= ~(1<<1);
+		//if (((data&16320)>>6)==1) //0b0011111111000000
+			//beep();
 		//setreg(address&0b11111 ,(data&0b0011111111000000)>>6);
-		if (GPIOB->ODR&(1<<1))
-		{
-			GPIOB->ODR &= ~(1<<1); //Turn off GPIOB1 as a flag
-			beep();
-		}
+		setreg(address&31 ,(data&16320)>>6);
 	}
+	/*if (GPIOB->ODR&(1<<1))
+	{
+		GPIOB->ODR &= ~(1<<1); //Turn off GPIOB1 as a flag
+		beep();
+	}*/
   }
   /* USER CODE END 3 */
 }
@@ -182,7 +192,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 4;
+  htim1.Init.Prescaler = 16;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 288;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -256,7 +266,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 4;
+  htim2.Init.Prescaler = 16;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 64;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -344,7 +354,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : D4_Pin D5_Pin D6_Pin D7_Pin

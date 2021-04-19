@@ -1,26 +1,33 @@
 #include "setup.h"
 #include "irq.h"
 #include "sid.h"
-#include "barebone_sounds.h"
-
-
-uint8_t address_lines;
-uint8_t data_lines;
-
-uint16_t address_lines16;
-uint16_t data_lines16;
-
-uint16_t rw_data_lines16=0;
-uint8_t dirty = 0;
-
-uint32_t data_buffer[255];
-uint32_t address_buffer[255];
-uint8_t	readIndex	    =	0;	// Index of the read pointer
-uint8_t	writeIndex	    =	0;	// Index of the write pointer
-uint8_t	bufferLength	=	0;	// Number of values in circular buffer
+//#include "barebone_sounds.h"
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
+
+void error_open_folder (void) 
+{
+
+  reset_SID();
+
+  OSC_1_HiLo = 0x2000; 
+  MASTER_VOLUME  = 0x0f;
+  ADSR_Attack_1  = 0x09;
+  ADSR_Decay_1  = 0x07;
+  ADSR_Sustain_1 = 0x00;
+  ADSR_Release_1 = 0x0b;
+  PW_HiLo_voice_1 = 0x400;
+  //sawtooth_bit_voice_1=1;
+  triangle_bit_voice_1 = 1;
+  pulse_bit_voice_1 = 1;
+  Gate_bit_1 = 1;
+  //delay(480);
+  //OSC_1_HiLo = 0x1000;
+  //Gate_bit_1 = 0;
+  //delay(1000);
+  HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
+}
 
 void initPorts()
 {
@@ -31,36 +38,16 @@ void initPorts()
 //unused
 uint16_t getAddrLines()
 {
-	/*
-  uint8_t a = digitalRead(CS);
-  __asm__ volatile ("nop");
-  //__asm__ volatile ("nop");
-  uint8_t b = digitalRead(CS);
-  if (!a&&!b)
-  {
-    //noInterrupts();
-    address_lines16 = GPIOA->regs->IDR;//&0b1001111000000000;
-    data_lines16 = GPIOB->regs->IDR;
- //   interrupts();
-  }
-  else
-  {
-    address_lines16 = 0;
-    data_lines16 = 0;
-  }
-  TODO
-  */
-  return address_lines16&0b11111;
+  return 0;
 }
 
 uint16_t getDataLines()
 {
-  return data_lines16&0b0011111111000000;
+  return 0;
 }
 
 void process()
 {
-      dirty = 0;
 }
 
 void delay_13ns(const uint16_t ns)
@@ -74,7 +61,7 @@ void delay_13ns(const uint16_t ns)
 
 void setRW(uint32_t dataidr)
 {
-	rw_data_lines16=dataidr;
+
 }
 
 //POKE 54272,0
@@ -101,6 +88,7 @@ void InitHardware() {
 
 void setreg(uint8_t addr,uint8_t value)
 {
+		GPIOB->ODR |= (1<<1);
     uint8_t access_adress = addr;
     SID[(access_adress)] = value; //  SID
 
@@ -109,7 +97,8 @@ void setreg(uint8_t addr,uint8_t value)
 
       case 0:
         OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8) ); // *0.985
-        //GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
+				GPIOB->ODR &= ~(1<<1);
+        // //Turn on GPIOB1 as a flag
         break;
       case 1:
         OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8)); // *0.985
@@ -272,11 +261,11 @@ void setreg(uint8_t addr,uint8_t value)
       case 24:
 
         //STAD4XX = 1; // SID write signal for IRQ
-        /*OFF3 =  ( (SID[24] >> 7 ) & 1) ;; // on/off; //
+        OFF3 =  ( (SID[24] >> 7 ) & 1) ;; // on/off; //
         FILTER_HP =  ( (SID[24] >> 6 ) & 1) ;; // on/off; //;
         FILTER_BP =  ( (SID[24] >> 5 ) & 1) ;; // on/off; //;
         FILTER_LP =  ( (SID[24] >> 4 ) & 1) ;; // on/off; //;
-        MASTER_VOLUME =   (SID[24]  & 15) ;; // on/off; //;*/
+        MASTER_VOLUME =   (SID[24]  & 15) ;; // on/off; //;
         // change volume immidiattelly
         //main_volume = MASTER_VOLUME * ( main_volume_32bit) / 15;
         //TIMER1_BASE->CCR1 =  main_volume;

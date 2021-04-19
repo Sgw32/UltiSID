@@ -43,12 +43,18 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint32_t data_buffer[255];
+uint32_t address_buffer[255];
+uint8_t	readIndex	    =	0;	// Index of the read pointer
+uint8_t	writeIndex	    =	0;	// Index of the write pointer
+uint8_t	bufferLength	=	0;	// Number of values in circular buffer
+uint16_t address_lines16_p;
+uint16_t data_lines16_p;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-extern void irq_handler();
+extern void irq_handler(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -212,12 +218,13 @@ void EXTI3_IRQHandler(void)
   //Fast transfer IDR to data storage
   data_lines16_p = GPIOB->IDR;
 
-  if ((data_lines16_p&0b10000)==0)
+  if ((GPIOB->IDR&0x10)==0) //0b10000
   {
-	  address_lines16_p = GPIOA->IDR;
-	  GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
+	  //GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
+	  address_buffer[writeIndex] = GPIOA->IDR;
+	  //GPIOB->ODR &= ~(1<<1);
+	  //GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
 	  data_buffer[writeIndex]=data_lines16_p;
-	  address_buffer[writeIndex]=address_lines16_p;
 	  writeIndex++;
 	  bufferLength++;
 	  //GPIOB->ODR &= ~(1<<1);

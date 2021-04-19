@@ -12,29 +12,21 @@ void irq_handler(void);
 #define PORTD_PDIR GPIOD_PDIR
 #define pinCountD 8
 
-void ReadLines();
+void ReadLines(void);
 
-void initPorts();
-void process();
-uint16_t getAddrLines();
-uint16_t getDataLines();
-void SID_emulator();
-void reset_SID();
-void beep();
-void selftest();
+void initPorts(void);
+void process(void);
+uint16_t getAddrLines(void);
+uint16_t getDataLines(void);
+void SID_emulator(void);
+void reset_SID(void);
+void beep(void);
+void selftest(void);
 void setRW(uint32_t dataidr);
 void setreg(uint8_t addr,uint8_t data);
-uint8_t getPeriod();
-uint8_t getMultiplier();
-void InitHardware();
-
-extern uint32_t address_lines16_p;
-extern uint32_t data_lines16_p;
-extern uint32_t data_buffer[255];
-extern uint32_t address_buffer[255];
-extern uint8_t	readIndex;
-extern uint8_t	writeIndex;
-extern uint8_t	bufferLength;
+uint8_t getPeriod(void);
+uint8_t getMultiplier(void);
+void InitHardware(void);
 
 
 #endif

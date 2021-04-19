@@ -2,10 +2,10 @@
 #define USID_H
 
 #include "setup.h"
-#include "IRQ.h"
+#include "irq.h"
 #include "stm32f1xx_hal.h"
 
-void setup();
-void loop();
+void setup(void);
+void loop(void);
 
 #endif
