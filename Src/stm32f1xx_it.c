@@ -43,8 +43,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-uint32_t data_buffer[255];
-uint32_t address_buffer[255];
+uint32_t data_buffer[256];
+uint32_t address_buffer[256];
 uint8_t	readIndex	    =	0;	// Index of the read pointer
 uint8_t	writeIndex	    =	0;	// Index of the write pointer
 uint8_t	bufferLength	=	0;	// Number of values in circular buffer
