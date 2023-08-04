@@ -1,17 +1,14 @@
 # UltiSID
 
-Open source SID 8580/6581 emulator that can be executed on Bluepill boards and STM32F103
+Open source SID 8580/6581 emulator that can be executed on Kung Fu Flash and new Kung Fu SID hardware
 
 License - GNU General Public License v3 (derived from Bakisha STM32 SID player)
 
 ## Introduction
 
 Project is heavily inspired by __SwinSID__ and __ArmSID__ project. And is maintained as an open-source alternative to them.
-Now it is even working on a STM32F103C8T6 on an overclocked freq 128 MHz with 8 MHz crystal. With some errors in behavior - some readings are missing. 
-I'm looking for contributers(I can even pay for the work) who will add some assembler optimization magic into my code. 
-Also I plan releasing Altium Designer PCB hardware files publicly available right after I'll sell 10 copies of UltiSIDs to public. 
-
-Working in a time-stretched and computation-intensive environment of C64 requires hardcore optimization of code. __Project is still in a very early stage of development__
+Now it is even working on a GD32F405RGT6 on 168 MHz with 8 MHz crystal, just like Kung Fu Flash - and firmware is using critical code from KFF. 
+I'm looking for contributers(I can even pay for the work) who will add some assembler optimization magic into SID code. 
 
 Why UltiSID? Why Ulti? I think that open-source contributions make our planet better, and since, the open-source alternative to SwinSID and ArmSID is still better than closed solutions. 
 In 2021 there are still no any good SID emulators publicly available. 2021, Carl!
@@ -30,6 +27,8 @@ https://github.com/dkm1978/BluePillSid - references
 Available on Archive.org - please check it, there is a SID emulation source for SwinSID atmega8515.
 * Kung Fu Flash - https://github.com/KimJorgensen/KungFuFlash
 I am inspired by simplicity of it and its power. 
+* Pavel Myasnikov
+Author of KungFuSID hardware design 
 * Special greetings to Protovision Games
 
 ## Future plans
@@ -39,20 +38,25 @@ I plan migrating to STM32F405RCT6(still, very cheap on Aliexpress) my PCB also s
 
 ## Limitations
 
-* We have a 256b buffer for SID data, and it is processed in main cycle. Seems enough, but sometimes I hear that it is not. 
 * Pitch is not calibrated
+* ADSR attack works somewhat slow
 * Data readings are not correct at event-intensive tunes(where there are a lot of write-to-SID activities)
 * No 6581/8580 switch
-* No paddles(sorry, no reads)
+* No paddles(can be done though)
 
 ## Support us
 
-PayPal Me:
-https://paypal.me/sgw32
-Or buy something here (3d models):
+Paypal is now blocked in Russia, unfortuntaly I have no residence permit in other countries, where paypal is working.
+Crypto: 
+0xeDc17cb23241eACe19DF3617291aa7d2d92E62DC (ETH, USDT ERC20)
+Buy something here (3d models):
 https://www.cgtrader.com/sgw32
 
-## Video(and audio) PoC
+## Video(and audio) 
 
+## New video:
+https://youtube.com/shorts/YMMjhMZqSjQ?feature=share
+
+Old video:
 [![UltiSID](https://img.youtube.com/vi/_ROxem-S0Jo/0.jpg)](https://www.youtube.com/watch?v=_ROxem-S0Jo)
 
