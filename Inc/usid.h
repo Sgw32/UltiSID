@@ -6,6 +6,5 @@
 #include "stm32f1xx_hal.h"
 
 void setup(void);
-void loop(void);
 
 #endif

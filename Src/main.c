@@ -111,25 +111,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	//irq_handler();
-	if (bufferLength>0)
-	{
-//		GPIOB->ODR |= (1<<1); //Turn on GPIOB1 as a flag
-		uint32_t data = data_buffer[readIndex];
-		uint32_t address = address_buffer[readIndex];
-		bufferLength--;
-		readIndex++;
-//		GPIOB->ODR &= ~(1<<1);
-		//if (((data&16320)>>6)==1) //0b0011111111000000
-			//beep();
-		//setreg(address&0b11111 ,(data&0b0011111111000000)>>6);
-		setreg(address&31 ,(data&16320)>>6);
-	}
-	/*if (GPIOB->ODR&(1<<1))
-	{
-		GPIOB->ODR &= ~(1<<1); //Turn off GPIOB1 as a flag
-		beep();
-	}*/
+		if (bufferLength>0)
+		{
+			uint32_t data = data_buffer[readIndex];
+			uint32_t address = address_buffer[readIndex];
+			bufferLength--;
+			readIndex++;
+			setreg(address&31 ,(data&16320)>>6);
+		}
   }
   /* USER CODE END 3 */
 }

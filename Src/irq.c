@@ -1,16 +1,13 @@
 #include "setup.h"
 #include "irq.h"
 #include "sid.h"
-//#include "barebone_sounds.h"
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 
 void error_open_folder (void) 
 {
-
   reset_SID();
-
   OSC_1_HiLo = 0x2000; 
   MASTER_VOLUME  = 0x0f;
   ADSR_Attack_1  = 0x09;
@@ -22,61 +19,12 @@ void error_open_folder (void)
   triangle_bit_voice_1 = 1;
   pulse_bit_voice_1 = 1;
   Gate_bit_1 = 1;
-  //delay(480);
-  //OSC_1_HiLo = 0x1000;
-  //Gate_bit_1 = 0;
-  //delay(1000);
   HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
 }
 
-void initPorts()
-{
-
-}
-
-
-//unused
-uint16_t getAddrLines()
-{
-  return 0;
-}
-
-uint16_t getDataLines()
-{
-  return 0;
-}
-
-void process()
-{
-}
-
-void delay_13ns(const uint16_t ns)
-{
-	//one nop - 13 ns
-  uint32_t i = ns;
-  while (i-- > 0) {
-	  __asm__ volatile ("nop");
-  }
-}
-
-void setRW(uint32_t dataidr)
-{
-
-}
-
-//POKE 54272,0
-//
-void ReadLines() {
-
-}
-
-/*
-*/
-
 void irq_handler()
 {
-	//HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
-	TIM1->CCR1 =  main_volume;
+    TIM1->CCR1 =  main_volume;
     SID_emulator();
 }
 
@@ -84,7 +32,6 @@ void InitHardware() {
 	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1); //PWM
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_2); //IRQ
 }
-
 
 void setreg(uint8_t addr,uint8_t value)
 {
@@ -94,7 +41,6 @@ void setreg(uint8_t addr,uint8_t value)
 
     // disable if IRQ is transfering SID[] variable
     switch (access_adress) {
-
       case 0:
         OSC_1_HiLo = ((SID[0] & 0xff) + ( (SID[1] & 0xff) << 8) ); // *0.985
 				GPIOB->ODR &= ~(1<<1);
@@ -299,41 +245,8 @@ void setreg(uint8_t addr,uint8_t value)
     //PB13_HIGH;
 }
 
-void selftest()
-{
-	// sounds in barebone_sounds.h (names are just from another projects)
-	delay(1000);
-	error_open_folder();
-	delay(1000);
-	error_open_folder();
-	delay(1000);
-	reset_SID ();
-	delay(1000);
-}
-
-void beep()
-{
-	reset_SID();
-	delay(10);
-	error_open_folder();
-}
-
-uint8_t getPeriod()
-{
-  return period;  
-}
-
-uint8_t getMultiplier()
-{
-  return multiplier;
-}
-
 void reset_SID()
 {
-
-
-
-
   // list of global variables that control SID emulator . Keep in mind that IRQ will detect change after some delay (around 50uS)
   // detailed information: http://archive.6502.org/datasheets/mos_6581_sid.pdf
 
