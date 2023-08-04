@@ -4,11 +4,6 @@ Open source SID 8580/6581 emulator that can be executed on Kung Fu Flash and new
 
 License - GNU General Public License v3 (derived from Bakisha STM32 SID player)
 
-# Update May 2023:
-New firmware: 
-https://github.com/Sgw32/KungFuSID
-coming soon.
-
 ## Introduction
 
 Project is heavily inspired by __SwinSID__ and __ArmSID__ project. And is maintained as an open-source alternative to them.
